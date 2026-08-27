@@ -1,0 +1,157 @@
+// ============================================================
+// LA GRANDE ROUTE — src/data/events.js
+// Les rencontres aléatoires de l'Acte I.
+// Aucun texte en dur : tout passe par des clés w.event.*.
+//
+// SCHÉMA D'UN ÉVÉNEMENT :
+//   titre  : clé i18n du titre
+//   em     : émoji (fallback si l'illustration manque)
+//   img    : clé de IMG.event -> assets/ev_*.webp (bannière)
+//   npc    : (opt.) clé de IMG.npc, portrait rond sous la bannière
+//   txt    : clé i18n de la description
+//   choix  : [ { t, d, req?, consume?, eff() -> {txt, or?, combat?, heroique?} } ]
+//             or       -> couronnes gagnées
+//             combat   -> clé rencontreEvent(), déclenche un combat
+//             heroique -> +1 renommée
+//
+// RÈGLE D'ÉQUILIBRAGE : chaque événement propose au moins un
+// choix récompensé (or / renom / objet / soin / bénédiction) et
+// un choix neutre sans risque ni gain.
+// ============================================================
+const EVENTS=[
+
+// ────────────────────────────────────────────────────────────
+// GROUPE « MORAL & RENOM » — ces choix pèsent sur la réputation
+// ────────────────────────────────────────────────────────────
+
+// ── LA BÊTE ENCHAÎNÉE ────────────────────────────────────────
+// Un brumeux pris dans un piège à mâchoires.
+// c0 « L'achever »       -> +15 or (cuir & chaîne), sans renom
+// c1 « Ouvrir le piège » -> +1 renom, risque : la bête épargnée
+//                           peut dévorer un village en aval
+//                           (drapeau fleau_epargne)
+// c2 « Passer »          -> neutre
+{titre:'w.event.chained.title',em:'⛓️',img:'chained',txt:'w.event.chained.txt',choix:[
+{t:'w.event.chained.c0t',d:'w.event.chained.c0d',eff:()=>({txt:'w.event.chained.c0eff',or:15})},
+{t:'w.event.chained.c1t',d:'w.event.chained.c1d',eff:()=>{S.rep++;S.flags.fleau_epargne=true;return{txt:'w.event.chained.c1eff'};}},
+{t:'w.event.chained.c2t',d:'w.event.chained.c2d',eff:()=>({txt:'w.event.chained.c2eff'})}]},
+
+// ── LE PUITS EMPOISONNÉ ──────────────────────────────────────
+// Une charogne de noyé pourrit au fond d'un puits de village.
+// c0 « Purger »          -> +1 renom, drapeau puits_net
+//                           (repos complet au prochain village)
+// c1 « Boire par défi »  -> 50% : +12 PV / 50% : -10 PV + tox
+// c2 « Tourner les talons » -> neutre
+{titre:'w.event.well.title',em:'🕳️',img:'well',txt:'w.event.well.txt',choix:[
+{t:'w.event.well.c0t',d:'w.event.well.c0d',eff:()=>{S.rep++;S.flags.puits_net=true;return{txt:'w.event.well.c0eff'};}},
+{t:'w.event.well.c1t',d:'w.event.well.c1d',eff:()=>{if(Math.random()<.5){S.pv=Math.min(S.pvMax,S.pv+12);return{txt:'w.event.well.c1effOk'};}S.pv=Math.max(1,S.pv-10);S.tox+=15;return{txt:'w.event.well.c1effNo'};}},
+{t:'w.event.well.c2t',d:'w.event.well.c2d',eff:()=>({txt:'w.event.well.c2eff'})}]},
+
+// ── LE CONVOI DE RÉFUGIÉS ────────────────────────────────────
+// Des paysans en fuite serrent leurs derniers ballots.
+// c0 « Partager »   -> +1 renom +25 or (sauf si village décimé :
+//                      -1 renom, ils vous reconnaissent)
+// c1 « Monter la garde » -> +1 renom + bénédiction (+10% dégâts)
+// c2 « Ne pas s'arrêter » -> neutre
+{titre:'w.event.convoy.title',em:'🛺',img:'convoy',txt:'w.event.convoy.txt',choix:[
+{t:'w.event.convoy.c0t',d:'w.event.convoy.c0d',eff:()=>{if(S.flags.village_decime_nom){S.rep=Math.max(0,S.rep-1);return{txt:t('w.event.convoy.c0effRuined',{name:S.flags.village_decime_nom})};}S.rep++;return{txt:'w.event.convoy.c0effOk',or:25};}},
+{t:'w.event.convoy.c1t',d:'w.event.convoy.c1d',eff:()=>{S.rep++;S.beni=true;return{txt:'w.event.convoy.c1eff'};}},
+{t:'w.event.convoy.c2t',d:'w.event.convoy.c2d',eff:()=>({txt:'w.event.convoy.c2eff'})}]},
+
+// ── LE BRIGAND REPENTI ───────────────────────────────────────
+// Un brigand agonisant offre une cache contre un remède.
+// c0 « Le soigner »     -> +55 or (si fiole de soin dispo)
+// c1 « Le dépouiller »  -> +40 or, -1 renom
+// c2 « L'achever »      -> +1 renom (un berger a vu le geste)
+{titre:'w.event.bandit.title',em:'🩹',img:'bandit',txt:'w.event.bandit.txt',choix:[
+{t:'w.event.bandit.c0t',d:'w.event.bandit.c0d',eff:()=>{if(donnerSoin()){return{txt:'w.event.bandit.c0effOk',or:55};}return{txt:'w.event.bandit.c0effNo'};}},
+{t:'w.event.bandit.c1t',d:'w.event.bandit.c1d',eff:()=>{S.rep=Math.max(0,S.rep-1);return{txt:'w.event.bandit.c1eff',or:40};}},
+{t:'w.event.bandit.c2t',d:'w.event.bandit.c2d',eff:()=>({txt:'w.event.bandit.c2eff',heroique:true})}]},
+
+// ── LE PENDU ─────────────────────────────────────────────────
+// Un homme pend au chêne, encore vivant ; des pilleurs s'éloignent.
+// c0 « Couper la corde » -> +1 renom +40 or
+// c1 « Pister »          -> combat brigand (butin de combat)
+// c2 « Passer »          -> -1 Reputation, 
+{titre:'w.event.hanged.title',em:'🪢',img:'hanged',txt:'w.event.hanged.txt',choix:[
+{t:'w.event.hanged.c0t',d:'w.event.hanged.c0d',eff:()=>{S.rep++;return{txt:'w.event.hanged.c0eff',or:40};}},
+{t:'w.event.hanged.c1t',d:'w.event.hanged.c1d',eff:()=>({txt:'w.event.hanged.c1eff',combat:'brigand'})},
+{t:'w.event.hanged.c2t',d:'w.event.hanged.c2d',eff:()=>({txt:'w.event.hanged.c2eff'})}]},
+
+// ── LE VILLAGE PILLÉ ─────────────────────────────────────────
+// Une meute de fouisseurs pille des greniers en flammes.
+// c0 « Défendre » -> combat fouisseur, héroïque (+1 renom)
+// c1 « Attendre » -> neutre (personne ne vous voit)
+{titre:'w.event.pillaged.title',em:'🔥',img:'pillaged',txt:'w.event.pillaged.txt',choix:[
+{t:'w.event.pillaged.c0t',d:'w.event.pillaged.c0d',eff:()=>({txt:'w.event.pillaged.c0eff',combat:'fouisseur',heroique:true})},
+{t:'w.event.pillaged.c1t',d:'w.event.pillaged.c1d',eff:()=>({txt:'w.event.pillaged.c1eff'})}]},
+
+// ────────────────────────────────────────────────────────────
+// GROUPE « DANGERS & BUTIN » — risques, pièges, trésors
+// ────────────────────────────────────────────────────────────
+
+// ── LA NOYÉE ─────────────────────────────────────────────────
+// Une robe blanche fait signe au bord d'un étang glacé.
+// c0 « Approcher »      -> combat spectre (butin de combat)
+// c1 « Sort de protection » -> 50% : +1 renom / 50% : combat spectre
+// c2 « Reculer »        -> neutre
+{titre:'w.event.drowned.title',em:'🌊',img:'drowned',txt:'w.event.drowned.txt',choix:[
+{t:'w.event.drowned.c0t',d:'w.event.drowned.c0d',eff:()=>({txt:'w.event.drowned.c0eff',combat:'spectre'})},
+{t:'w.event.drowned.c1t',d:'w.event.drowned.c1d',eff:()=>{if(Math.random()<.5){S.rep++;return{txt:'w.event.drowned.c1effOk'};}return{txt:'w.event.drowned.c1effNo',combat:'spectre'};}},
+{t:'w.event.drowned.c2t',d:'w.event.drowned.c2d',eff:()=>({txt:'w.event.drowned.c2eff'})}]},
+
+// ── LE PÉAGE ─────────────────────────────────────────────────
+// Quatre hommes armés barrent le pont : 50 couronnes ou rien.
+// c0 « Payer »     -> -50 or (passage sûr) ; sinon combat brigand
+// c1 « Refuser »   -> combat brigand
+// c2 « Emprise »   -> 60% passage gratuit / 40% combat brigand
+{titre:'w.event.toll.title',em:'⛺',img:'toll',txt:'w.event.toll.txt',choix:[
+{t:'w.event.toll.c0t',d:'w.event.toll.c0d',eff:()=>{if(S.or>=50){S.or-=50;return{txt:'w.event.toll.c0effOk'};}return{txt:'w.event.toll.c0effNo',combat:'brigand'};}},
+{t:'w.event.toll.c1t',d:'w.event.toll.c1d',eff:()=>({txt:'w.event.toll.c1eff',combat:'brigand'})},
+{t:'w.event.toll.c2t',d:'w.event.toll.c2d',eff:()=>{if(Math.random()<.6){return{txt:'w.event.toll.c2effOk'};}return{txt:'w.event.toll.c2effNo',combat:'brigand'};}}]},
+
+// ── LE CERCLE DE PIERRES ─────────────────────────────────────
+// Des menhirs bourdonnent autour d'une offrande.
+// c0 « Méditer »  -> +22 PV
+// c1 « Prendre »  -> +90 or, -20 PV
+// c2 « Laisser »  -> neutre
+{titre:'w.event.circle.title',em:'🗿',img:'circle',txt:'w.event.circle.txt',choix:[
+{t:'w.event.circle.c0t',d:'w.event.circle.c0d',eff:()=>{S.pv=Math.min(S.pvMax,S.pv+22);return{txt:'w.event.circle.c0eff'};}},
+{t:'w.event.circle.c1t',d:'w.event.circle.c1d',eff:()=>{S.pv=Math.max(1,S.pv-20);return{txt:'w.event.circle.c1eff',or:90};}},
+{t:'w.event.circle.c2t',d:'w.event.circle.c2d',eff:()=>({txt:'w.event.circle.c2eff'})}]},
+
+// ── LE NID DE GOULES ─────────────────────────────────────────
+// Un nid tiède grouillant d'œufs, au creux d'un ravin.
+// c0 « Passer au large » -> neutre
+// c1 « Nettoyer »        -> combat goule (butin de combat)
+// c2 « Bombe » (req+consume poudre_aveuglante)
+//                        -> +1 renom +70 or, sans combat
+{titre:'w.event.goulenest.title',em:'🥚',img:'goulenest',txt:'w.event.goulenest.txt',choix:[
+{t:'w.event.goulenest.c0t',d:'w.event.goulenest.c0d',eff:()=>({txt:'w.event.goulenest.c0eff'})},
+{t:'w.event.goulenest.c1t',d:'w.event.goulenest.c1d',eff:()=>({txt:'w.event.goulenest.c1eff',combat:'goule'})},
+{t:'w.event.goulenest.c2t',d:'w.event.goulenest.c2d',req:'poudre_aveuglante',consume:'poudre_aveuglante',eff:()=>{S.rep++;return{txt:'w.event.goulenest.c2eff',or:70};}}]},
+
+// ────────────────────────────────────────────────────────────
+// GROUPE « SOINS & RENCONTRES » — répit, remèdes, échanges
+// ────────────────────────────────────────────────────────────
+
+// ── LE DÉSERTEUR ─────────────────────────────────────────────
+// Un soldat blessé ne veut que rentrer chez lui.
+// c0 « Remède »      -> bénédiction (+10% dégâts) si fiole dispo
+// c1 « Herbes »      -> +25 or
+// c2 « Le dépouiller » -> +60 or, -15 PV (il se débat)
+{titre:'w.event.deserter.title',em:'🪖',img:'deserter',txt:'w.event.deserter.txt',choix:[
+{t:'w.event.deserter.c0t',d:'w.event.deserter.c0d',eff:()=>{if(donnerSoin()){S.beni=true;return{txt:'w.event.deserter.c0effOk'};}return{txt:'w.event.deserter.c0effNo'};}},
+{t:'w.event.deserter.c1t',d:'w.event.deserter.c1d',eff:()=>({txt:'w.event.deserter.c1eff',or:25})},
+{t:'w.event.deserter.c2t',d:'w.event.deserter.c2d',eff:()=>{S.pv=Math.max(1,S.pv-15);return{txt:'w.event.deserter.c2eff',or:60};}}]},
+
+// ── L'HERBORISTE DES MARAIS ──────────────────────────────────
+// Une vieille femme trie des racines sur pilotis.
+// c0 « Accepter »  -> +1 fiole de soin de classe (offert)
+// c1 « Acheter »   -> +1 objet de classe contre 30 or
+// c2 « Congé »     -> neutre
+{titre:'w.event.herbalist.title',em:'🌿',npc:'herboriste',img:'herbalist',txt:'w.event.herbalist.txt',choix:[
+{t:'w.event.herbalist.c0t',d:'w.event.herbalist.c0d',eff:()=>{const id=soinClasse();S.sac[id]=(S.sac[id]||0)+1;return{txt:t('w.event.herbalist.c0eff',{name:t(OBJETS[id].n)})};}},
+{t:'w.event.herbalist.c1t',d:'w.event.herbalist.c1d',eff:()=>{if(S.or>=30){S.or-=30;const id=itemClasse();S.sac[id]=(S.sac[id]||0)+1;return{txt:t('w.event.herbalist.c1effOk',{name:t(OBJETS[id].n)})};}return{txt:'w.event.herbalist.c1effNo'};}},
+{t:'w.event.herbalist.c2t',d:'w.event.herbalist.c2d',eff:()=>({txt:'w.event.herbalist.c2eff'})}]}
+];

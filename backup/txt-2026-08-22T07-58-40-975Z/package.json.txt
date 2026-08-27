@@ -1,0 +1,35 @@
+{
+  "name": "les-terres-mornes",
+  "version": "1.0.0",
+  "description": "La Grande Route - Chroniques des Terres Mornes",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve .",
+    "optimize": "node scripts/optimize-images.js",
+    "obfuscate": "node scripts/obfuscate.js",
+    "itch": "node scripts/build-for-itch.js",
+	"apk": "node scripts/build-apk-signed2.mjs",
+    "build": "npm run build:itch",
+    "scaffold": "node scripts/scaffold2.mjs",
+    "locales:check": "node scripts/check-locales.mjs",
+    "data:check": "node scripts/check-data.mjs",
+    "phase3:tools": "node scripts/apply-phase3-content-tools.mjs"
+  },
+  "keywords": [
+    "game",
+    "rpg",
+    "dark-fantasy",
+    "tactical"
+  ],
+  "author": "Rubuks",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "javascript-obfuscator": "^4.1.0",
+    "sharp": "^0.33.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "appId": "com.lesterresmornes.app",
+  "appName": "Les Terres Mornes",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}

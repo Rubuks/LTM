@@ -1,0 +1,47 @@
+
+// ============================================================
+// LA GRANDE ROUTE — src/content/act2/bestiary.js
+// Monstres + boss + trophée de l'Acte II.
+// ============================================================
+registerMonster('matin_barbon', {
+  act: 'act2', n: 'w.foe.matin_barbon.name', em: '🐕', pv: [26, 34], atq: [6, 10],
+  cat: 'bete', faib: 'embrasement', txt: 'w.foe.matin_barbon.txt',
+  ints: [
+    { n: 'w.foe.matin_barbon.i0n', em: '🦷', d: [6, 9] },
+    { n: 'w.foe.matin_barbon.i1n', em: '🐾', d: [4, 7], fx: 'peur' },
+    { n: 'w.foe.matin_barbon.i2n', em: '💢', d: [8, 12] }
+  ]
+});
+registerMonster('piqueur', {
+  act: 'act2', n: 'w.foe.piqueur.name', em: '🏹', pv: [30, 38], atq: [7, 11],
+  cat: 'humain', faib: 'murmure', txt: 'w.foe.piqueur.txt',
+  ints: [
+    { n: 'w.foe.piqueur.i0n', em: '🎯', d: [7, 10] },
+    { n: 'w.foe.piqueur.i1n', em: '🪤', d: [0, 0], fx: 'sonne' },
+    { n: 'w.foe.piqueur.i2n', em: '⚔️', d: [6, 9] }
+  ]
+});
+registerMonster('corrompu', {
+  act: 'act2', n: 'w.foe.corrompu.name', em: '🧟', pv: [24, 30], atq: [5, 9],
+  cat: 'mort', faib: 'sceau', txt: 'w.foe.corrompu.txt',
+  ints: [
+    { n: 'w.foe.corrompu.i0n', em: '🤮', d: [4, 7], fx: 'poison' },
+    { n: 'w.foe.corrompu.i1n', em: '🦷', d: [5, 8] },
+    { n: 'w.foe.corrompu.i2n', em: '😱', d: [4, 7], fx: 'peur' }
+  ]
+});
+registerMonster('bailli_grimaut', {
+  act: 'act2', n: 'w.foe.bailli_grimaut.name', em: '⚖️', pv: [110, 110], atq: [9, 14],
+  cat: 'humain', faib: 'sceau', txt: 'w.foe.bailli_grimaut.txt',
+  epic: true, trophy: 'sceau_bailli',
+  special: { fx: 'rally', n: 'w.foe.bailli_grimaut.spn', em: '📯' },
+  ints: [
+    { n: 'w.foe.bailli_grimaut.i0n', em: '⚔️', d: [9, 13] },
+    { n: 'w.foe.bailli_grimaut.i1n', em: '⚖️', d: [0, 0], fx: 'sonne' },
+    { n: 'w.foe.bailli_grimaut.i2n', em: '💀', d: [12, 16] }
+  ]
+});
+registerTrophy('sceau_bailli', {
+  act: 'act2', n: 'w.trophy.sceau_bailli.name', desc: 'w.trophy.sceau_bailli.desc',
+  voice: 'w.trophy.sceau_bailli.voice', img: 'v_rune', bonus: { pv: 6 }
+});

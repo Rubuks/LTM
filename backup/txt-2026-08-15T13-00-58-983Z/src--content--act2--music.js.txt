@@ -1,0 +1,12 @@
+
+// ============================================================
+// LA GRANDE ROUTE — src/content/act2/music.js
+// Moods musicaux de l'Acte II (procédural ; fichiers plus tard).
+// ============================================================
+window.GameData.music = window.GameData.music || {};
+window.GameData.music.act2 = {
+  map: { mood: 'map' },
+  village: { mood: 'village' },
+  combat: { mood: 'combat' },
+  boss: { mood: 'boss' }
+};

@@ -1,0 +1,10 @@
+// ============================================================
+// LA GRANDE ROUTE — src/core/utils.js
+// Aléa, accès DOM, proxy d'écran, sons WebAudio.
+// ============================================================
+const R=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const $=id=>document.getElementById(id);
+const ec=new Proxy($('ecran'),{get(o,k){const v=Reflect.get(o,k);return typeof v==='function'?v.bind(o):v;},set(o,k,v){if(k==='innerHTML')v=decorate(v);o[k]=v;return true;}});
+let AC=null;
+function sfx(t){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);const n=AC.currentTime;const P={clic:[620,'square',.04,.06],hit:[130,'sawtooth',.14,.22],crit:[85,'sawtooth',.22,.32],sort:[420,'sine',.13,.28],coin:[880,'triangle',.09,.18],soin:[520,'sine',.11,.32],mort:[70,'sawtooth',.35,.65],cor:[200,'square',.25,.5]}[t]||[440,'sine',.05,.1];o.type=P[1];o.frequency.setValueAtTime(P[0],n);if(t==='sort'||t==='mort')o.frequency.exponentialRampToValueAtTime(P[0]*(t==='mort'?.3:2.4),n+P[3]);g.gain.setValueAtTime(P[2],n);g.gain.exponentialRampToValueAtTime(.0001,n+P[3]);o.start(n);o.stop(n+P[3]+.03);}catch(e){}}

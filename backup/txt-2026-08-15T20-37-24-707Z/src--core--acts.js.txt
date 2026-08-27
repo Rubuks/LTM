@@ -1,0 +1,95 @@
+// ============================================================
+// LA GRANDE ROUTE — src/core/acts.js
+// Bascule d'acte : enchaînement générique Acte I -> Acte II.
+// Aucun texte : clés i18n uniquement.
+// ============================================================
+window.LOCK_NEXT_ACT = true; // VERROU DÉMO : inhibe « Poursuivre — Acte II »
+function actsList(){
+  var g=(window.GameData&&GameData.acts)||{};
+  return Object.keys(g).map(function(id){return g[id];}).sort(function(a,b){return (a.order||0)-(b.order||0);});
+}
+function actDef(id){var g=(window.GameData&&GameData.acts)||{};return g[id]||null;}
+function nextActId(id){
+  var list=actsList();
+  for(var i=0;i<list.length-1;i++){if(list[i].id===id)return list[i+1].id;}
+  return null;
+}
+function startAct(actId){
+if(!S)return;
+var cls=S.cls;
+var keep={or:S.or||0,rep:S.rep||0,tox:S.tox||0,kills:S.kills||0,sac:S.sac||{},trophies:S.trophies||[],worn:S.worn||[],flags:S.flags||{},primesRemplies:S.primesRemplies||0};
+newRun(cls,actId);
+Object.assign(S,keep);
+window.GameData.currentAct=actId;if(window.syncGameDataToLegacy)window.syncGameDataToLegacy(actId);
+recalcTrophyStats();
+S.pv=S.pvMax;
+S.beni=false;
+sauvegarder();
+var a=actDef(actId);
+if(a&&a.paths){viewPrologueBaron(a);}else if(a&&a.prologueKey){viewActePrologue(a);}else{rCarte();}
+}
+var PROLOGUE_ACT=null;
+function viewActePrologue(a){
+  PROLOGUE_ACT=a;
+  scene(function(){viewActePrologue(PROLOGUE_ACT);});
+  rHud();
+  ec.innerHTML='<div class="ecran"><div class="parch" style="max-width:420px;margin:2.5rem auto"><h3>'+(a.prologueEm||'📜')+' '+t(a.prologueTitle||a.titleKey||'')+'</h3><div class="orn">✦ ✦ ✦</div><p class="q">'+t(a.prologueKey)+'</p><div style="margin-top:1rem"><button class="btn btn-or" onclick="rCarte()">'+t('ui.prologue.enter')+'</button></div></div></div>';
+}
+(function(){
+  if(typeof viewActe!=='function')return;
+  var _va=viewActe;
+  window.viewActe=function(){
+    _va();
+if(window.LOCK_NEXT_ACT)return;
+    try{
+      var nxt=nextActId(S&&S.act);
+      if(!nxt)return;
+      var na=actDef(nxt);
+      if(!na||!(window.GameData&&GameData.maps&&GameData.maps[nxt]))return;
+      var box=document.querySelector('#ecran .fin')||document.getElementById('ecran');
+      if(!box)return;
+      var div=document.createElement('div');
+      div.style.marginTop='1rem';
+      div.innerHTML='<button class="btn btn-or gros" onclick="startAct(\''+nxt+'\')">'+t('ui.act.next')+' '+t(na.titleKey||'')+'</button>';
+      box.appendChild(div);
+    }catch(e){}
+  };
+})();
+
+var BARON_ACT=null;
+function viewPrologueBaron(a){
+BARON_ACT=a;
+scene(function(){viewPrologueBaron(BARON_ACT);});
+rHud();
+var btns=(a.paths||[]).map(function(p){
+return '<button class="btn btn-or" style="margin-top:.5rem" onclick="choisirChemin(\''+p+'\')"><b>'+t('w.path.'+p+'.name')+'</b><br><span style="text-transform:none;letter-spacing:0;font-family:\'Alegreya\';font-size:.85rem">'+t('w.path.'+p+'.desc')+'</span></button>';
+}).join('');
+ec.innerHTML='<div class="ecran"><div class="parch" style="max-width:440px;margin:2rem auto"><h3>'+(a.prologueEm||'🏰')+' '+t(a.titleKey||'')+'</h3><div class="orn">✦ ✦ ✦</div><p class="q">'+t('w.prologue.baron')+'</p><h3 style="margin-top:1rem">'+t('ui.act2.choose')+'</h3><div style="margin-top:.6rem">'+btns+'</div></div></div>';
+}
+function choisirChemin(p){
+if(!S)return;
+S.chemin=p;
+var g=window.GameData;
+if(g&&g.maps&&g.maps[S.act+'_'+p]){g.maps[S.act]=Object.assign({},g.maps[S.act+'_'+p]);}
+if(g&&g.villagesByColumn&&g.villagesByColumn[S.act+'_'+p]){g.villagesByColumn[S.act]=g.villagesByColumn[S.act+'_'+p];}
+S.map=genMap();S.cur=0;S.visited=[0];S.etape=0;
+sauvegarder();
+sfx('cor');
+rCarte();
+}
+(function(){
+if(typeof reprendre!=='function')return;
+var _rp=reprendre;
+window.reprendre=function(){
+_rp();
+try{
+var a=(typeof actDef==='function')?actDef(S&&S.act):null;
+if(S&&a&&a.paths&&!S.chemin){viewPrologueBaron(a);return;}
+if(S&&S.chemin&&window.GameData&&GameData.maps&&GameData.maps[S.act+'_'+S.chemin]){
+GameData.maps[S.act]=Object.assign({},GameData.maps[S.act+'_'+S.chemin]);
+if(GameData.villagesByColumn&&GameData.villagesByColumn[S.act+'_'+S.chemin])GameData.villagesByColumn[S.act]=GameData.villagesByColumn[S.act+'_'+S.chemin];
+rCarte();
+}
+}catch(e){}
+};
+})();
